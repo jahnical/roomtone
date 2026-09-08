@@ -3,12 +3,19 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      # Loopback-only: this host has no LXD/VM boundary between it and the
-      # internet, so a bare "3000:3000" would bind 0.0.0.0 and be reachable
-      # directly, bypassing the NPM reverse proxy entirely. NPM (running on
-      # this same host) reaches it over 127.0.0.1; nothing public-facing
-      # should ever hit this port straight.
+      # Loopback-only, for convenience (e.g. curl-ing from the host directly)
+      # — this is *not* how NPM reaches the app, see the `proxy` network
+      # below. A bare "3000:3000" would bind 0.0.0.0 and be reachable
+      # directly from the internet, bypassing the reverse proxy entirely.
       - "127.0.0.1:3000:3000"
+    networks:
+      # `default`: talks to `db` (see DATABASE_URL below). `proxy`: an
+      # external network shared with the nginx-proxy-manager container,
+      # already running on this host outside this compose project — joining
+      # it is what lets NPM forward to this container by name instead of a
+      # bridge-network IP that isn't stable across recreates.
+      - default
+      - proxy
     environment:
       # Quoted throughout: several of the ${VAR:?message} fallback messages
       # below contain colons, which an unquoted YAML scalar would parse as
@@ -49,6 +56,8 @@ services:
       target: builder
     command: ["npx", "prisma", "migrate", "deploy", "--config", "prisma7.config.ts"]
     restart: "no"
+    networks:
+      - default
     environment:
       DATABASE_URL: "postgresql://roomtone:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/roomtone?schema=public"
     depends_on:
@@ -58,6 +67,8 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    networks:
+      - default
     environment:
       POSTGRES_USER: roomtone
       POSTGRES_PASSWORD: "${DB_PASSWORD:?set DB_PASSWORD in .env}"
@@ -75,3 +86,11 @@ services:
 
 volumes:
   roomtone_prod_db_data:
+
+networks:
+  default: {}
+  # Pre-existing network the nginx-proxy-manager container is already on
+  # (created outside this compose project) — external: true tells compose
+  # not to try to create or own it, just join it.
+  proxy:
+    external: true

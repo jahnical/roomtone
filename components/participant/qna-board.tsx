@@ -6,6 +6,7 @@ import type { QnaItemPayload } from "@/lib/realtime/events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { BASE_PATH } from "@/lib/config/base-path";
 import { cn } from "@/lib/utils/cn";
 
 interface QnaBoardProps {
@@ -25,7 +26,7 @@ export function QnaBoard({ code, token, items }: QnaBoardProps) {
     if (!token || !text.trim()) return;
     setSubmitting(true);
     try {
-      const res = await fetch("/api/qna", {
+      const res = await fetch(`${BASE_PATH}/api/qna`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, token, text: text.trim() }),
@@ -54,7 +55,7 @@ export function QnaBoard({ code, token, items }: QnaBoardProps) {
       return next;
     });
     try {
-      await fetch(`/api/qna/${id}/upvote`, {
+      await fetch(`${BASE_PATH}/api/qna/${id}/upvote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, token }),

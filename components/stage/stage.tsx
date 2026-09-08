@@ -8,6 +8,7 @@ import type { QuestionTypeValue } from "@/lib/validation/deck";
 import { computeLiveInsight } from "@/lib/insight/live";
 import { computeVelocity } from "@/lib/insight/velocity";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { BASE_PATH } from "@/lib/config/base-path";
 import { WordCloudView } from "./word-cloud-view";
 import { StageBarChart, type BarDatum } from "./stage-bar-chart";
 import { ResponseWall } from "./response-wall";
@@ -76,7 +77,7 @@ export function Stage({
   // Realtime updates from every connected participant (and this Stage's own
   // reconnects) — see app/api/live/[code]/route.ts.
   useEffect(() => {
-    const source = new EventSource(`/api/live/${code}`);
+    const source = new EventSource(`${BASE_PATH}/api/live/${code}`);
     source.onmessage = (ev) => {
       const event = JSON.parse(ev.data) as RealtimeEvent;
       if (event.type === "question-update") {
@@ -358,7 +359,7 @@ function QrPanel({
       <div className={prominent ? "rounded-xl bg-white p-3" : "rounded-lg bg-white p-1.5"}>
         {/* eslint-disable-next-line @next/next/no-img-element -- SVG generated per-request by our own API route */}
         <img
-          src={`/api/qr/${code}`}
+          src={`${BASE_PATH}/api/qr/${code}`}
           alt={`QR code to join at ${joinUrl}`}
           width={prominent ? 220 : 84}
           height={prominent ? 220 : 84}

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth/session";
 import { getSessionForUser } from "@/lib/sessions/queries";
 import { buildJoinUrl } from "@/lib/config/site";
+import { BASE_PATH } from "@/lib/config/base-path";
 import { DeleteSessionButton } from "@/components/decks/delete-session-button";
 import { StartSessionButton } from "@/components/decks/start-session-button";
 import { QuestionPicker } from "@/components/decks/question-picker";
@@ -33,7 +34,7 @@ export default async function SessionLobbyPage({
         <div className="rounded-xl bg-white p-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- SVG generated per-request by our own API route, not an optimizable static asset */}
           <img
-            src={`/api/qr/${roomtoneSession.code}`}
+            src={`${BASE_PATH}/api/qr/${roomtoneSession.code}`}
             alt={`QR code to join session ${roomtoneSession.code}`}
             width={280}
             height={280}

@@ -6,6 +6,7 @@ import type { QnaItemPayload, RealtimeEvent } from "@/lib/realtime/events";
 import { getOrCreateParticipantToken } from "@/lib/client/participant-token";
 import type { StageQuestion } from "@/components/stage/stage";
 import { useToast } from "@/components/ui/toast";
+import { BASE_PATH } from "@/lib/config/base-path";
 import { AnswerForm } from "./answer-form";
 
 interface ParticipantRoomProps {
@@ -45,7 +46,7 @@ export function ParticipantRoom({ code, deckTitle, questions, initialState, init
   // has opened a question, so the "N joined" count reflects the waiting room.
   useEffect(() => {
     if (!token) return;
-    fetch("/api/join", {
+    fetch(`${BASE_PATH}/api/join`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, token }),
@@ -53,7 +54,7 @@ export function ParticipantRoom({ code, deckTitle, questions, initialState, init
   }, [code, token]);
 
   useEffect(() => {
-    const source = new EventSource(`/api/live/${code}`);
+    const source = new EventSource(`${BASE_PATH}/api/live/${code}`);
     source.onmessage = (ev) => {
       const event = JSON.parse(ev.data) as RealtimeEvent;
       if (event.type === "session-state") {
@@ -75,7 +76,7 @@ export function ParticipantRoom({ code, deckTitle, questions, initialState, init
     if (!token) return;
     setSubmitting(true);
     try {
-      const res = await fetch("/api/respond", {
+      const res = await fetch(`${BASE_PATH}/api/respond`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, token, questionId, ...value }),

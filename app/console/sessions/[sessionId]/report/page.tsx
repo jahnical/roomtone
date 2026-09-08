@@ -7,6 +7,7 @@ import { StageBarChart, type BarDatum } from "@/components/stage/stage-bar-chart
 import { WordCloudView } from "@/components/stage/word-cloud-view";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
+import { BASE_PATH } from "@/lib/config/base-path";
 
 export const metadata = { title: "Session report · Roomtone" };
 
@@ -33,11 +34,14 @@ export default async function SessionReportPage({
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
-          <a href={`/api/export/${data.sessionId}/csv`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <a
+            href={`${BASE_PATH}/api/export/${data.sessionId}/csv`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
             Export CSV
           </a>
           <a
-            href={`/api/export/${data.sessionId}/markdown`}
+            href={`${BASE_PATH}/api/export/${data.sessionId}/markdown`}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             Export Markdown

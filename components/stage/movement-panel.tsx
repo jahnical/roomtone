@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { PairingResult } from "@/lib/insight/pairing-query";
+import { BASE_PATH } from "@/lib/config/base-path";
 
 /**
  * Shown only when the active question is paired (Question.pairedWithId) —
@@ -24,7 +25,7 @@ export function MovementPanel({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/pairing/${sessionId}/${questionId}`)
+    fetch(`${BASE_PATH}/api/pairing/${sessionId}/${questionId}`)
       .then((r) => r.json())
       .then((data: PairingResult) => {
         if (!cancelled) setResult(data);
