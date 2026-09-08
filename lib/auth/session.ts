@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
+import { getPublicBaseUrl } from "@/lib/config/site";
 import {
   SESSION_COOKIE_MAX_AGE,
   SESSION_COOKIE_NAME,
@@ -16,7 +17,13 @@ export async function createSessionCookie(payload: SessionPayload) {
   const store = await cookies();
   store.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // Tied to whether this deployment is actually reachable over HTTPS
+    // (PUBLIC_BASE_URL), not just NODE_ENV. A Secure cookie is never sent
+    // over a plain-http connection at all — if the reverse proxy in front
+    // doesn't (yet) terminate real TLS, gating this on NODE_ENV===
+    // "production" alone silently makes every session cookie unusable
+    // rather than failing loudly.
+    secure: getPublicBaseUrl().startsWith("https://"),
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_COOKIE_MAX_AGE,
