@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth/jwt";
+import { BASE_PATH } from "@/lib/config/base-path";
 
 // Everything under the presenter console requires a logged-in user.
 // Participant routes (/j/*), the marketing/home page, auth pages, and the
@@ -16,7 +17,12 @@ export async function proxy(request: NextRequest) {
   const session = token ? await verifySessionToken(token) : null;
 
   if (!session) {
-    const loginUrl = new URL("/login", request.url);
+    // request.url/request.nextUrl are already basePath-stripped by Next
+    // (matcher patterns above are written the same way, without the
+    // prefix) — but this constructs a literal redirect URL by hand, which
+    // isn't a basePath-aware API the way next/link or redirect() are, so
+    // the prefix has to go on explicitly or this redirects to a 404.
+    const loginUrl = new URL(`${BASE_PATH}/login`, request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
