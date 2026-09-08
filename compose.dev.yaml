@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: roomtone
+      POSTGRES_PASSWORD: roomtone
+      POSTGRES_DB: roomtone
+    ports:
+      - "5433:5432"
+    volumes:
+      - roomtone_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roomtone -d roomtone"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  roomtone_db_data:

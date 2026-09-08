@@ -1,26 +1,110 @@
 @import "tailwindcss";
 
+/*
+ * Roomtone design tokens.
+ *
+ * Two surfaces, one palette:
+ *  - App shell (marketing, auth, console, participant phone) — light,
+ *    blue-tinted, follows system light/dark preference.
+ *  - Stage (the projected presenter view) — always deep navy, regardless
+ *    of system theme, because it's read off a projector by a whole room,
+ *    not a personal preference. Applied via the `.stage` class.
+ *
+ * The `--color-*` tokens are exposed as Tailwind utilities (bg-brand-600,
+ * text-stage-cyan, ...) through the @theme block below.
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7fafc;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-muted: #eef2f9;
+  --border: #dbe4f3;
+
+  --brand-50: #eff6ff;
+  --brand-100: #dbeafe;
+  --brand-200: #bfdbfe;
+  --brand-300: #93c5fd;
+  --brand-400: #60a5fa;
+  --brand-500: #3b82f6;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+  --brand-800: #1e40af;
+  --brand-900: #1e3a8a;
+  --brand-950: #172554;
+
+  /* Stage surface — constant regardless of light/dark preference. */
+  --stage-bg: #08172a;
+  --stage-bg-raised: #0e2340;
+  --stage-border: #1c3a5e;
+  --stage-foreground: #eaf2ff;
+  --stage-foreground-muted: #93aecb;
+  --stage-cyan: #22d3ee;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a1120;
+    --foreground: #eaf2ff;
+    --surface: #101b30;
+    --surface-muted: #16233c;
+    --border: #24354f;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
+
+  --color-stage-bg: var(--stage-bg);
+  --color-stage-bg-raised: var(--stage-bg-raised);
+  --color-stage-border: var(--stage-border);
+  --color-stage-foreground: var(--stage-foreground);
+  --color-stage-foreground-muted: var(--stage-foreground-muted);
+  --color-stage-cyan: var(--stage-cyan);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Presenter Stage: intentionally not theme-reactive. A projector is read by
+   an entire room, so it must not shift with any one viewer's OS setting. */
+.stage {
+  background: var(--stage-bg);
+  color: var(--stage-foreground);
+  color-scheme: dark;
+}
+
+/* Participant phone view: also intentionally not theme-reactive, for the
+   opposite reason. A student answering on a phone with system dark mode on
+   would otherwise get the light gradient this view was designed around
+   layered against dark `--background`/`--foreground` tokens, muddying
+   contrast in a way nobody actually chose. Pinned light and built entirely
+   from the brand-* ramp (fixed in :root, unlike --background/--foreground)
+   plus literal white, so it can't drift with the OS setting the way .stage
+   can't either. */
+.responder {
+  background: var(--brand-50);
+  color: var(--brand-950);
+  color-scheme: light;
 }

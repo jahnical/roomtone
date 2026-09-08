@@ -1,0 +1,193 @@
+// Roomtone data model.
+//
+// Design notes:
+// - Participants are anonymous: `Participant.token` is a random opaque string
+//   generated client-side and stored in localStorage, never a name or device
+//   id. Pre/post pairing (Question.pairedWithId) is done purely through that
+//   token, so we can show *how the room moved* without ever knowing *who*
+//   moved. `nickname` is optional and cosmetic only.
+// - `Response` uses one row per answer with three optional value columns
+//   (text / option / number) rather than a JSON blob, so the insight engine
+//   can query and aggregate with plain SQL/Prisma instead of parsing JSON.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7 no longer reads a connection url from the schema file at all —
+// Migrate gets it from prisma7.config.ts, and the runtime PrismaClient gets
+// it via an explicit driver adapter (see lib/db/client.ts). See
+// https://pris.ly/d/prisma7-client-config
+datasource db {
+  provider = "postgresql"
+}
+
+enum QuestionType {
+  WORD_CLOUD
+  MULTIPLE_CHOICE
+  OPEN_TEXT
+  SCALE
+  QNA
+}
+
+enum SessionState {
+  DRAFT // created, not yet presented
+  LIVE // currently being presented
+  ENDED // presentation finished, report available
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+
+  decks    Deck[]
+  sessions Session[]
+}
+
+model Deck {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions Question[]
+  sessions  Session[]
+
+  @@index([userId])
+}
+
+model Question {
+  id     String       @id @default(cuid())
+  deckId String
+  order  Int
+  type   QuestionType
+  prompt String
+
+  // Type-specific settings, e.g. { min: 1, max: 5, minLabel, maxLabel } for
+  // SCALE, { allowMultiple: bool } for MULTIPLE_CHOICE. Kept as JSON because
+  // the shape genuinely varies per type and none of it needs to be queried.
+  config Json @default("{}")
+
+  // Self-relation powering pre/post pairing: the "after" question points
+  // back at the "before" question it should be compared against.
+  pairedWithId String?
+  pairedWith   Question?  @relation("QuestionPair", fields: [pairedWithId], references: [id])
+  pairedFrom   Question[] @relation("QuestionPair")
+
+  deck      Deck       @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  options   Option[]
+  responses Response[]
+
+  @@index([deckId])
+  @@index([pairedWithId])
+}
+
+model Option {
+  id         String @id @default(cuid())
+  questionId String
+  order      Int
+  label      String
+
+  question  Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  responses Response[]
+
+  @@index([questionId])
+}
+
+model Session {
+  id              String       @id @default(cuid())
+  code            String       @unique // 6-char join code, e.g. "K7QX2M"
+  deckId          String
+  userId          String
+  state           SessionState @default(DRAFT)
+  activeQuestionId String?
+  createdAt       DateTime     @default(now())
+  startedAt       DateTime?
+  endedAt         DateTime?
+
+  deck         Deck          @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  participants Participant[]
+  responses    Response[]
+  qnaItems     QnaItem[]
+
+  @@index([deckId])
+  @@index([userId])
+}
+
+model Participant {
+  id         String   @id @default(cuid())
+  sessionId  String
+  token      String // random opaque id from the participant's browser, not identifying
+  nickname   String?
+  joinedAt   DateTime @default(now())
+
+  session    Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  responses  Response[]
+  qnaItems   QnaItem[]
+  qnaUpvotes QnaUpvote[]
+
+  @@unique([sessionId, token])
+  @@index([sessionId])
+}
+
+model Response {
+  id            String   @id @default(cuid())
+  sessionId     String
+  questionId    String
+  participantId String
+  valueText     String?
+  optionId      String?
+  valueNumber   Float?
+  createdAt     DateTime @default(now())
+
+  session     Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question    Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  option      Option?     @relation(fields: [optionId], references: [id], onDelete: SetNull)
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  // One answer per participant per question (re-answering overwrites via upsert).
+  @@unique([questionId, participantId])
+  @@index([sessionId, questionId])
+}
+
+model QnaItem {
+  id            String   @id @default(cuid())
+  sessionId     String
+  participantId String
+  text          String
+  // Denormalized count kept in sync (within the same transaction) with
+  // QnaUpvote rows below — sorting the wall by popularity is the common
+  // read path, so a plain indexed Int beats a COUNT() aggregate on every
+  // page/SSE push. QnaUpvote is still the source of truth for "did this
+  // participant already upvote."
+  upvotes       Int      @default(0)
+  answered      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  session     Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  upvoteRecords QnaUpvote[]
+
+  @@index([sessionId])
+}
+
+model QnaUpvote {
+  id            String   @id @default(cuid())
+  qnaItemId     String
+  participantId String
+  createdAt     DateTime @default(now())
+
+  qnaItem     QnaItem     @relation(fields: [qnaItemId], references: [id], onDelete: Cascade)
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  // One upvote per participant per question — this is what makes upvoting
+  // mean something instead of being a click counter.
+  @@unique([qnaItemId, participantId])
+}

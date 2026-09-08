@@ -1,7 +1,17 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Pin the Turbopack root to this project: without it, Next.js walks up
+  // looking for a lockfile and finds an unrelated one in ~/Projects, which
+  // sits outside this git repo and isn't actually part of this app.
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
+  // Traces the minimal file set (only the node_modules each page actually
+  // needs) into .next/standalone, so the production Docker image doesn't
+  // have to ship the full node_modules tree — see Dockerfile.
+  output: "standalone",
 };
 
 export default nextConfig;
